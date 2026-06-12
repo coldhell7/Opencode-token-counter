@@ -1,6 +1,6 @@
 {
   "name": "opencode-token-counter",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Track token usage, cost, and provider/model statistics in OpenCode. Provides in-chat reports, CSV export, and a graphical web dashboard.",
   "type": "module",
   "main": "server.ts",
