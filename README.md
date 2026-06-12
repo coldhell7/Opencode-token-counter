@@ -1,40 +1,35 @@
 # Token Counter
 
-An OpenCode plugin that automatically tracks token usage, cost, and provider/model statistics across all your sessions.
+An OpenCode plugin that automatically tracks token usage, cost, and provider/model statistics across all your AI sessions.
 
-## Features
-
-- **Automatic Tracking** — Listens for assistant messages and records token usage in real-time
-- **Provider & Model Breakdown** — See consumption per provider (Anthropic, OpenAI, etc.) and per model
-- **In-Chat Reports** — Formatted markdown reports with tables and unicode sparklines
-- **Interactive Web Dashboard** — Chart.js dashboard with line, bar, donut, and stacked charts
-- **CSV Export** — Download raw data for external analysis
-- **Four Time Periods** — 24 hours, 7 days, 30 days, 1 year
-- **CLI (TUI) Support** — Command palette integration and event tracking in the terminal version
-- **Lightweight** — SQLite via Bun's built-in library (zero external dependencies)
+Automatic tracking, slash commands, AI tool, CSV export, and a full Chart.js dashboard.
 
 ## Installation
 
-### Via npm
+### Via GitHub (clone)
+
+```bash
+git clone https://github.com/coldhell7/Opencode-token-counter.git
+```
+
+Then add the plugin to your OpenCode config:
+
+```jsonc
+// ~/.config/opencode/opencode.jsonc
+{
+  "plugin": [
+    "/path/to/Opencode-token-counter/server.ts"
+  ]
+}
+```
+
+### Via npm (once published)
 
 ```jsonc
 // ~/.config/opencode/opencode.jsonc
 {
   "plugin": [
     "opencode-token-counter"
-  ]
-}
-```
-
-### Via local file
-
-Clone the repository and add the absolute path:
-
-```jsonc
-// ~/.config/opencode/opencode.jsonc
-{
-  "plugin": [
-    "/path/to/opencode-token-counter/server.ts"
   ]
 }
 ```
