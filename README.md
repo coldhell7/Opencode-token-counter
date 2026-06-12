@@ -2,7 +2,7 @@
 
 An OpenCode plugin that automatically tracks token usage, cost, and provider/model statistics across all your AI sessions.
 
-Automatic tracking, slash commands, AI tool, CSV export, and a full Chart.js dashboard.
+Automatic tracking, AI tool integration, CSV export, and a full Chart.js dashboard.
 
 ## Installation
 
@@ -36,34 +36,46 @@ Then add the plugin to your OpenCode config:
 
 ### First Run
 
-After adding the plugin to your config, **restart OpenCode**. The plugin will start tracking tokens automatically. Run `/tokens report` in any session to see your first report and a welcome guide.
+After adding the plugin to your config, **restart OpenCode**. The plugin starts tracking tokens automatically. Use the command palette or ask the AI about your token usage.
 
 ## Usage
 
-### Quick Access (Cmd+K / Ctrl+K)
+### Ask the AI (recommended)
 
-Press **Cmd+K** (Mac) or **Ctrl+K** (Linux/Windows) and type one of:
+OpenCode commands route to the AI, which uses the built-in `tokens` tool to generate responses:
 
-| Command Palette Entry | Action |
+| Command Palette Entry | What it does |
 |---|---|
-| `tokens` | View 7-day usage report |
-| `tokens-24h` | View 24-hour usage report |
-| `tokens-30d` | View 30-day usage report |
-| `tokens-dashboard` | Open interactive charts in browser |
+| `tokens` | AI generates a 7-day usage report with sparklines |
+| `tokens-24h` | AI generates a 24-hour usage report |
+| `tokens-30d` | AI generates a 30-day usage report |
+| `tokens-dashboard` | Opens interactive Chart.js dashboard in browser |
+| `tokens-export` | AI exports raw data as CSV |
 
-### Slash Commands
+You can also just ask the AI directly: *"What's my token usage?"*, *"How much did I spend on AI today?"*, etc.
 
-Type these directly in any session:
+### Web Dashboard
 
-| Command | Description |
-|---------|-------------|
-| `/tokens report 7d` | Usage report for last 7 days (default) |
-| `/tokens report 24h` | Usage report for last 24 hours |
-| `/tokens report 30d` | Usage report for last 30 days |
-| `/tokens report 1y` | Usage report for last year |
-| `/tokens providers` | Breakdown by provider and model |
-| `/tokens dashboard` | Open interactive Chart.js dashboard in browser |
-| `/tokens export 7d` | Export raw data as CSV |
+When the plugin starts, it launches a local HTTP server with an interactive Chart.js dashboard. The URL is printed in the OpenCode logs:
+
+```
+[Token Counter] Dashboard: http://localhost:PORT
+```
+
+Use the `tokens-dashboard` command to open it in your browser.
+
+The dashboard supports:
+- Daily, provider, and model breakdowns
+- Adjustable time range (24h / 7d / 30d / 1y)
+- CSV export from the browser
+
+### CSV Export
+
+Export usage data via the `tokens-export` command or by hitting the API directly:
+
+```
+http://localhost:PORT/api/export?period=7d
+```
 
 ### Report Example
 
@@ -106,9 +118,21 @@ Jun 07 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃  234,567
 
 ### Desktop Titlebar Button
 
-OpenCode does not currently provide a plugin API for adding custom UI elements (buttons, panels, dialogs) to the Electron desktop renderer. Plugins run server-side and cannot modify the rendered interface. **Use Cmd+K or `/tokens` commands as your quick-access mechanism instead.**
+OpenCode does not currently provide a plugin API for adding custom UI elements (buttons, panels, dialogs) to the Electron desktop renderer. Plugins run server-side and cannot modify the rendered interface. **Use Cmd+K or ask the AI as your quick-access mechanism instead.**
 
 If OpenCode adds plugin UI injection points in the future, this plugin will be updated to support a native titlebar button.
+
+### Slash Command Hooks
+
+OpenCode v1.15.7 does not support the `command.execute.before` hook for slash commands. The plugin includes the hook as a forward-compatible fallback, but currently commands route through the AI which uses the `tokens` tool to generate responses.
+
+### Built-in `opencode stats`
+
+OpenCode has a built-in `opencode stats` command that tracks session-level token usage. This plugin provides additional value:
+- Per-provider and per-model breakdowns
+- Interactive web dashboard with Chart.js
+- CSV export
+- Configurable time ranges (24h / 7d / 30d / 1y)
 
 ## Data Storage
 
