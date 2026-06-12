@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Counter Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+
+.header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 20px; font-weight: 600; color: #f0f6fc; }
+.header .subtitle { font-size: 13px; color: #8b949e; }
+
+.tabs { display: flex; gap: 4px; padding: 12px 24px; background: #161b22; border-bottom: 1px solid #30363d; }
+.tab { padding: 8px 20px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-size: 14px; color: #8b949e; background: transparent; transition: all .15s; }
+.tab:hover { color: #f0f6fc; background: #21262d; }
+.tab.active { color: #f0f6fc; background: #1f6feb; border-color: #1f6feb; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+.card .label { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.card .value { font-size: 22px; font-weight: 600; color: #f0f6fc; }
+.card .sub { font-size: 12px; color: #8b949e; margin-top: 4px; }
+
+.charts { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 24px; }
+.chart-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
+.chart-box h3 { font-size: 14px; color: #8b949e; margin-bottom: 16px; text-transform: uppercase; letter-spacing: .5px; }
+.chart-box canvas { max-height: 300px; }
+
+.charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 768px) { .charts-2col { grid-template-columns: 1fr; } }
+
+.export-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-size: 13px; text-decoration: none; }
+.export-btn:hover { background: #30363d; }
+
+.footer { text-align: center; padding: 20px; color: #484f58; font-size: 12px; border-top: 1px solid #21262d; margin-top: 24px; }
+
+.error { color: #f85149; text-align: center; padding: 40px; }
+.loading { text-align: center; padding: 40px; color: #8b949e; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>Token Counter</h1>
+    <div class="subtitle">OpenCode Token Usage Dashboard</div>
+  </div>
+  <a class="export-btn" id="exportCsv" href="#">Export CSV</a>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-period="24h">24 Hours</button>
+  <button class="tab" data-period="7d">7 Days</button>
+  <button class="tab" data-period="30d">30 Days</button>
+  <button class="tab" data-period="1y">1 Year</button>
+</div>
+
+<div class="container" id="app">
+  <div class="loading" id="loading">Loading data...</div>
+  <div id="content" style="display:none">
+    <div class="cards" id="cards"></div>
+    <div class="charts">
+      <div class="chart-box"><h3>Token Volume Over Time</h3><canvas id="tokenChart"></canvas></div>
+    </div>
+    <div class="charts-2col">
+      <div class="chart-box"><h3>Cost Over Time</h3><canvas id="costChart"></canvas></div>
+      <div class="chart-box"><h3>Provider Distribution</h3><canvas id="providerChart"></canvas></div>
+    </div>
+    <div class="charts-2col">
+      <div class="chart-box"><h3>Model Usage</h3><canvas id="modelChart"></canvas></div>
+      <div class="chart-box"><h3>Daily Cost by Provider</h3><canvas id="costStackChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">Token Counter plugin for OpenCode</div>
+
+<script>
+let currentPeriod = "7d";
+let charts = {};
+
+function formatNum(n) { if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'K'; return n.toLocaleString(); }
+
+async function loadData(period) {
+  currentPeriod = period;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+  try {
+    const [statsRes, providerRes, modelRes, dailyRes] = await Promise.all([
+      fetch(`/api/stats?period=${period}`),
+      fetch(`/api/stats?period=${period}&by=provider`),
+      fetch(`/api/stats?period=${period}&by=model`),
+      fetch(`/api/stats?period=${period}&by=daily`),
+    ]);
+    const stats = await statsRes.json();
+    const providers = await providerRes.json();
+    const models = await modelRes.json();
+    const daily = await dailyRes.json();
+    renderCards(stats);
+    renderTokenChart(daily);
+    renderCostChart(daily);
+    renderProviderChart(providers);
+    renderModelChart(models);
+    renderCostStackChart(daily, providers);
+    document.getElementById('exportCsv').href = `/api/export?period=${period}`;
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch (e) {
+    document.getElementById('loading').innerHTML = '<div class="error">Failed to load data: ' + e.message + '</div>';
+  }
+}
+
+function renderCards(stats) {
+  const cards = document.getElementById('cards');
+  cards.innerHTML = '';
+  const items = [
+    { label: 'Total Cost', value: '$' + stats.totalCost.toFixed(2) },
+    { label: 'Total Tokens', value: formatNum(stats.totalTokens), sub: formatNum(stats.totalTokens) + ' tokens' },
+    { label: 'Input Tokens', value: formatNum(stats.inputTokens) },
+    { label: 'Output Tokens', value: formatNum(stats.outputTokens) },
+    { label: 'Reasoning Tokens', value: formatNum(stats.reasoningTokens) },
+    { label: 'Cache Read', value: formatNum(stats.cacheRead) },
+    { label: 'Sessions', value: stats.totalSessions.toString() },
+  ];
+  for (const item of items) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="label">${item.label}</div><div class="value">${item.value}</div>${item.sub ? `<div class="sub">${item.sub}</div>` : ''}`;
+    cards.appendChild(card);
+  }
+}
+
+function renderTokenChart(daily) {
+  if (charts.tokenChart) charts.tokenChart.destroy();
+  const ctx = document.getElementById('tokenChart').getContext('2d');
+  charts.tokenChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: daily.map(d => d.date),
+      datasets: [
+        { label: 'Input', data: daily.map(d => d.inputTokens), borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.1)', fill: true, tension: .3 },
+        { label: 'Output', data: daily.map(d => d.outputTokens), borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', fill: true, tension: .3 },
+        { label: 'Reasoning', data: daily.map(d => d.reasoningTokens), borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,0.1)', fill: true, tension: .3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
+        y: { ticks: { color: '#8b949e', callback: v => formatNum(v) }, grid: { color: '#21262d' } },
+      },
+    },
+  });
+}
+
+function renderCostChart(daily) {
+  if (charts.costChart) charts.costChart.destroy();
+  const ctx = document.getElementById('costChart').getContext('2d');
+  charts.costChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: daily.map(d => d.date),
+      datasets: [{ label: 'Cost ($)', data: daily.map(d => d.cost), backgroundColor: '#1f6feb', borderRadius: 4 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
+        y: { ticks: { color: '#8b949e', callback: v => '$' + v.toFixed(2) }, grid: { color: '#21262d' } },
+      },
+    },
+  });
+}
+
+function renderProviderChart(providers) {
+  if (charts.providerChart) charts.providerChart.destroy();
+  const ctx = document.getElementById('providerChart').getContext('2d');
+  const colors = ['#1f6feb', '#3fb950', '#d29922', '#f85149', '#bc8cff', '#79c0ff', '#56d364', '#e3b341'];
+  charts.providerChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: providers.map(p => p.providerID),
+      datasets: [{
+        data: providers.map(p => p.totalTokens),
+        backgroundColor: colors.slice(0, providers.length),
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#8b949e' } },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + formatNum(ctx.parsed) + ' tokens' } },
+      },
+    },
+  });
+}
+
+function renderModelChart(models) {
+  if (charts.modelChart) charts.modelChart.destroy();
+  const ctx = document.getElementById('modelChart').getContext('2d');
+  const top = models.slice(0, 10);
+  const colors = ['#1f6feb', '#3fb950', '#d29922', '#f85149', '#bc8cff', '#79c0ff', '#56d364', '#e3b341', '#ff7b72', '#a5d6ff'];
+  charts.modelChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(m => m.modelID),
+      datasets: [{
+        label: 'Tokens',
+        data: top.map(m => m.totalTokens),
+        backgroundColor: colors.slice(0, top.length),
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b949e', callback: v => formatNum(v) }, grid: { color: '#21262d' } },
+        y: { ticks: { color: '#8b949e' }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderCostStackChart(daily, providers) {
+  if (charts.costStackChart) charts.costStackChart.destroy();
+  const ctx = document.getElementById('costStackChart').getContext('2d');
+
+  fetch(`/api/stats?period=${currentPeriod}&by=daily-provider`).then(r => r.json()).then(data => {
+    const providerNames = [...new Set(data.map(d => d.provider_id))];
+    const dates = [...new Set(data.map(d => d.date))].sort();
+    const datasets = providerNames.map((p, i) => ({
+      label: p,
+      data: dates.map(date => {
+        const found = data.find(d => d.date === date && d.provider_id === p);
+        return found ? found.cost : 0;
+      }),
+      backgroundColor: ['#1f6feb', '#3fb950', '#d29922', '#f85149', '#bc8cff', '#79c0ff', '#56d364', '#e3b341'][i % 8],
+    }));
+    if (charts.costStackChart2) charts.costStackChart2.destroy();
+    charts.costStackChart2 = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: dates, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { color: '#8b949e' } } },
+        scales: {
+          x: { stacked: true, ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
+          y: { stacked: true, ticks: { color: '#8b949e', callback: v => '$' + v.toFixed(2) }, grid: { color: '#21262d' } },
+        },
+      },
+    });
+  });
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  loadData(tab.dataset.period);
+});
+
+loadData("7d");
+</script>
+</body>
+</html>

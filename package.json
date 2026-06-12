@@ -1,0 +1,38 @@
+{
+  "name": "opencode-token-counter",
+  "version": "0.2.0",
+  "description": "Track token usage, cost, and provider/model statistics in OpenCode. Provides in-chat reports, CSV export, and a graphical web dashboard.",
+  "type": "module",
+  "main": "server.ts",
+  "exports": {
+    ".": "./server.ts",
+    "./tui": "./server.ts"
+  },
+  "files": [
+    "server.ts",
+    "lib/",
+    "web/",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "plugin",
+    "token",
+    "usage",
+    "tracking",
+    "cost",
+    "analytics"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coldhell7/Opencode-token-counter"
+  },
+  "bugs": {
+    "url": "https://github.com/coldhell7/Opencode-token-counter/issues"
+  },
+  "homepage": "https://github.com/coldhell7/Opencode-token-counter",
+  "dependencies": {
+    "@opencode-ai/plugin": ">=1.15.0"
+  }
+}
