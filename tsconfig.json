@@ -9,5 +9,5 @@
     "allowImportingTsExtensions": true,
     "types": ["bun-types"]
   },
-  "include": ["server.ts", "lib/**/*.ts"]
+  "include": ["server.ts", "tui.ts", "lib/**/*.ts"]
 }

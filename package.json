@@ -6,10 +6,11 @@
   "main": "server.ts",
   "exports": {
     ".": "./server.ts",
-    "./tui": "./server.ts"
+    "./tui": "./tui.ts"
   },
   "files": [
     "server.ts",
+    "tui.ts",
     "lib/",
     "web/",
     "README.md"
@@ -34,5 +35,8 @@
   "homepage": "https://github.com/coldhell7/Opencode-token-counter",
   "dependencies": {
     "@opencode-ai/plugin": ">=1.15.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
   }
 }

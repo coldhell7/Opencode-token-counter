@@ -123,27 +123,31 @@ export default {
       "command.execute.before": async (input: any, output: any) => {
         if (input.command !== "tokens") return;
         try {
+          if (!db) {
+            output.parts = [{ type: "text", id: crypto.randomUUID(), sessionID: input.sessionID, messageID: crypto.randomUUID(), text: "Token Counter database is not initialized. Please restart OpenCode." }];
+            return;
+          }
           const args = (input.arguments || "").trim().split(/\s+/);
           const period = parsePeriod(args[1]);
           let text: string;
           if (args[0] === "dashboard") {
             text = dashboardUrl ? (openBrowser(dashboardUrl), "Dashboard opened at " + dashboardUrl) : "Dashboard not running.";
           } else if (args[0] === "providers") {
-            text = generateProviderReport(db!.getProviderStats(period), db!.getModelStats(period));
+            text = generateProviderReport(db.getProviderStats(period), db.getModelStats(period));
           } else if (args[0] === "export") {
-            const records = db!.getAllRawRecords(period);
+            const records = db.getAllRawRecords(period);
             const csv = toCsv(records);
             const fp = join(DB_DIR, `export-${period}-${Date.now()}.csv`);
-            Bun.writeSync(fp, csv);
+            writeFileSync(fp, csv, "utf-8");
             text = "Exported " + records.length + " records to " + fp;
           } else {
-            text = generateFullReport(period, db!.getStats(period), db!.getProviderStats(period), db!.getModelStats(period), db!.getDailyUsage(period));
+            text = generateFullReport(period, db.getStats(period), db.getProviderStats(period), db.getModelStats(period), db.getDailyUsage(period));
           }
           if (welcomePending) {
             welcomePending = false;
             text = generateWelcomeMessage(text);
           }
-          output.parts = [{ type: "text", id: crypto.randomUUID(), sessionID: input.sessionID, messageID: "", text }];
+          output.parts = [{ type: "text", id: crypto.randomUUID(), sessionID: input.sessionID, messageID: crypto.randomUUID(), text }];
         } catch (e: any) {
           console.error("[Token Counter] Hook error:", e.message);
         }
@@ -151,9 +155,10 @@ export default {
 
       event: async ({ event }: any) => {
         try {
+          if (!db) return;
           if (event.type === "message.updated" && event.properties?.info?.role === "assistant") {
             const m = event.properties.info;
-            db!.insert({
+            db.insert({
               timestamp: Date.now(),
               sessionID: m.sessionID,
               providerID: m.providerID || "unknown",
@@ -175,16 +180,17 @@ export default {
             period: tool.schema.enum(["24h", "7d", "30d", "1y"]).optional().describe("Time range: 24h, 7d (default), 30d, 1y"),
           },
           async execute(args: any) {
+            if (!db) return { title: "Error", output: "Token Counter database is not initialized. Please restart OpenCode." };
             const p = parsePeriod(args.period);
-            if (args.action === "providers") return { title: "Provider & Model Usage", output: generateProviderReport(db!.getProviderStats(p), db!.getModelStats(p)) };
+            if (args.action === "providers") return { title: "Provider & Model Usage", output: generateProviderReport(db.getProviderStats(p), db.getModelStats(p)) };
             if (args.action === "export") {
-              const records = db!.getAllRawRecords(p);
+              const records = db.getAllRawRecords(p);
               const csv = toCsv(records);
               const fp = join(DB_DIR, `export-${p}-${Date.now()}.csv`);
               await Bun.write(fp, csv);
               return { title: "CSV Export (" + p + ")", output: "Exported " + records.length + " records to " + fp };
             }
-            return { title: "Token Usage (" + p + ")", output: generateFullReport(p, db!.getStats(p), db!.getProviderStats(p), db!.getModelStats(p), db!.getDailyUsage(p)) };
+            return { title: "Token Usage (" + p + ")", output: generateFullReport(p, db.getStats(p), db.getProviderStats(p), db.getModelStats(p), db.getDailyUsage(p)) };
           },
         }),
       },

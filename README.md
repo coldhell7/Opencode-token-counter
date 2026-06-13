@@ -10,15 +10,18 @@ Automatic tracking, AI tool integration, CSV export, and a full Chart.js dashboa
 
 ```bash
 git clone https://github.com/coldhell7/Opencode-token-counter.git
+cd Opencode-token-counter
+bun install
 ```
 
-Then add the plugin to your OpenCode config:
+Then add **both** plugins to your OpenCode config (server for tracking + TUI for slash commands):
 
 ```jsonc
 // ~/.config/opencode/opencode.jsonc
 {
   "plugin": [
-    "/path/to/Opencode-token-counter/server.ts"
+    "/path/to/Opencode-token-counter/server.ts",
+    "/path/to/Opencode-token-counter/tui.ts"
   ]
 }
 ```
@@ -29,7 +32,8 @@ Then add the plugin to your OpenCode config:
 // ~/.config/opencode/opencode.jsonc
 {
   "plugin": [
-    "opencode-token-counter"
+    "opencode-token-counter",
+    "opencode-token-counter/tui"
   ]
 }
 ```

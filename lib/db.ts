@@ -1,5 +1,7 @@
 import { mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
+// @ts-ignore - bun:sqlite is a Bun built-in, available at runtime in OpenCode's Bun process
+import { Database } from "bun:sqlite";
 
 export interface TokenRecord {
   timestamp: number;
@@ -66,30 +68,14 @@ export function getPeriodRange(period: Period): { since: number; now: number } {
   return { since: now - ms[period], now };
 }
 
-type BunDB = {
-  run(sql: string, bindings?: Record<string, any>): void;
-  query(sql: string): { all(bindings?: Record<string, any>): any[]; get(bindings?: Record<string, any>): any };
-  prepare(sql: string): { run(bindings?: Record<string, any>): void; all(bindings?: Record<string, any>): any[]; get(bindings?: Record<string, any>): any };
-  close(): void;
-};
-
-type BunDatabaseConstructor = new (path: string, options?: any) => BunDB;
-
-function loadBunSqlite(): BunDatabaseConstructor {
-  // @ts-ignore - bun:sqlite is available at runtime in OpenCode's Bun process
-  const { Database } = require("bun:sqlite");
-  return Database;
-}
-
 export class TokenDB {
-  private db: BunDB;
+  private db: any;
 
   constructor(dbPath: string) {
     const dir = dirname(dbPath);
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
-    const Database = loadBunSqlite();
     this.db = new Database(dbPath);
     this.db.run("PRAGMA journal_mode = WAL");
     this.db.run("PRAGMA synchronous = NORMAL");
