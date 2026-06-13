@@ -103,7 +103,7 @@ export default {
       writeFileSync(WELCOME_FILE, Date.now().toString(), "utf-8");
       console.error("");
       console.error("================================================");
-      console.error("  Token Counter v0.2.2 installed!");
+      console.error("  Token Counter v0.2.3 installed!");
       console.error("  Run /tokens report to get started.");
       console.error("  Or press Cmd+K and type 'tokens'.");
       console.error("================================================");
